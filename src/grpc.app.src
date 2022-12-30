@@ -1,0 +1,7 @@
+{application, grpc,[
+    {description, "An OTP library for grpc"},
+    {vsn, "0.1.0"},
+    {applications, [kernel, stdlib, cowboy]},
+    {licenses, ["Syramo SLA"]},
+    {modules,[]}
+ ]}.
