@@ -1,0 +1,10 @@
+{application, sy_grpc,
+ [{description, "An OTP library"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [kernel, stdlib, cowboy]},
+  {env,[]},
+  {modules, []},
+  {licenses, ["Syramo SLA"]},
+  {links, []}
+ ]}.
