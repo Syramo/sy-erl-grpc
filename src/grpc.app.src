@@ -1,4 +1,4 @@
-{application, grpc,[
+{application, sy_grpc,[
     {description, "An OTP library for grpc"},
     {vsn, "0.1.0"},
     {applications, [kernel, stdlib, cowboy]},
