@@ -133,6 +133,7 @@
 %%         |      +       |       +        |                      |        +        |           '''
 
 -module(http2_client).
+-include_lib("kernel/include/logger.hrl").
 
 -behaviour(gen_server).
 
@@ -499,9 +500,9 @@ handle_info({T, _Port, Data}, #{buffer := Buffer} = C) when T == tcp;
     handle_packet(<<Buffer/binary, Data/binary>>, C#{buffer => <<>>});
 handle_info({T, _Port}, #{streams := Streams} = C) when T == tcp_closed;
                                                         T == ssl_closed ->
-    io:format("issue closed by peer: ~p~n",[T]),
+    ?LOG_ERROR("socket closed by peer"),
     end_streams(Streams, ?PROTOCOL_ERROR),
-    {stop, closed_by_peer, C};
+    {stop, {shutdown, closed_by_peer}, C};
 handle_info({cleanup_stream, StreamId}, #{streams := Streams} = C) ->
     {noreply, C#{streams => remove_stream(StreamId, Streams)}};
 handle_info({ping_timeout, Opaque}, #{ping_sent := Pings} = C) ->
@@ -513,16 +514,16 @@ handle_info({ping_timeout, Opaque}, #{ping_sent := Pings} = C) ->
             {noreply, C}
     end;
 handle_info(Other, C) ->
-    io:format("got unexpected info: ~p~n", [Other]),
+    ?LOG_WARNING("got unexpected info: ~p", [Other]),
     {noreply, C}.
 
 %% @private
 terminate(closed_by_peer, #{keep_alive := KeepAlive}) ->
-    io:format("SOCKET closed by peer~n"),
+    ?LOG_ERROR("terminating due to socket closed by peer"),
     stop_ping(KeepAlive),
     ok;
 terminate(Reason, #{transport := ssl, socket := Socket, keep_alive := KeepAlive}) ->
-    io:format("SOCKET closed for reason ~p~n",[Reason]),
+    ?LOG_ERROR("terminating due to socket closed for reason ~p",[Reason]),
     stop_ping(KeepAlive),
     ssl:close(Socket);
 terminate(_Reason, #{transport := tcp, socket := Socket, keep_alive := KeepAlive}) ->
