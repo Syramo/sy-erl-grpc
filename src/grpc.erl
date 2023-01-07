@@ -37,7 +37,8 @@
          set_trailers/2,
          send_headers/1,
          send_headers/2,
-         metadata/1, 
+         metadata/1,
+         connection_proc/1, 
          authority/1, scheme/1, method/1, path/1, 
          set_compression/2]).
 
@@ -225,6 +226,9 @@ send_headers(#{cowboy_req := Req,
 %% grpc-timeout header this will also be returned as metadata.
 metadata(#{metadata := Metadata}) ->
     Metadata.
+
+connection_proc(#{cowboy_req:=#{pid:=Conn}}) -> Conn;
+connection_proc(_) -> none.
 
 -spec authority(Stream::stream()) -> binary().
 %% @doc Get the value for the :authority header.
