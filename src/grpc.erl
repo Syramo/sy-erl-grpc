@@ -224,8 +224,8 @@ send_headers(#{cowboy_req := Req,
 %% metadata), except for :method, :authority, :scheme and :path (there are
 %% separate functions to get access to those). But if there is for example a
 %% grpc-timeout header this will also be returned as metadata.
-metadata(#{metadata := Metadata}) ->
-    Metadata.
+metadata(#{metadata := Metadata}) -> Metadata;
+metadata(_) -> none.
 
 connection_proc(#{cowboy_req:=#{pid:=Conn}}) -> Conn;
 connection_proc(_) -> none.
