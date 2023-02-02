@@ -91,7 +91,6 @@ info(StreamID, Info, State0=#state{next=Next0}) ->
 
 -spec terminate(cowboy_stream:streamid(), cowboy_stream:reason(), #state{}) -> any().
 terminate(StreamID, Reason, #state{next=Next}) ->
-    ?DLOG("Stream terminates: ~p",[Reason]),
     cowboy_stream:terminate(StreamID, Reason, Next).
 
 -spec early_error(cowboy_stream:streamid(), cowboy_stream:reason(),
