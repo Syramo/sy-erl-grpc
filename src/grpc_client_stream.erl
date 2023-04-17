@@ -255,30 +255,37 @@ send_msg(#{stream_id := StreamId,
            state := State
           } = Stream, Message, EndStream) ->
     Encoded = encode(Stream, Message),
-    case HeadersSent of
+    HeaderResp = case HeadersSent of
         false ->
             DefaultHeaders = default_headers(Stream),
             AllHeaders = add_metadata(DefaultHeaders, Metadata),
-            ok = grpc_client_connection:send_headers(Connection, StreamId, AllHeaders);
+            grpc_client_connection:send_headers(Connection, StreamId, AllHeaders);
         true ->
             ok
     end,
-    Opts = [{end_stream, EndStream}],
-    NewState = 
-        case {EndStream, State} of
-            {false, _} when State == idle ->
-                open;
-            {false, _} ->
-                State;
-            {true, _} when State == open;
-                           State == idle ->
-                half_closed_local;
-            {true, _} ->
-                closed
-        end,
-    Res = grpc_client_connection:send_body(Connection, StreamId, Encoded, Opts),
-    {Res, Stream#{headers_sent => true,
-            state => NewState}}.
+    case HeaderResp of
+        ok ->
+            Opts = [{end_stream, EndStream}],
+            NewState = 
+                case {EndStream, State} of
+                    {false, _} when State == idle ->
+                        open;
+                    {false, _} ->
+                        State;
+                    {true, _} when State == open;
+                                State == idle ->
+                        half_closed_local;
+                    {true, _} ->
+                        closed
+                end,
+            Res = grpc_client_connection:send_body(Connection, StreamId, Encoded, Opts),
+            {Res, Stream#{headers_sent => true,
+                    state => NewState}};
+        _ ->
+            {HeaderResp, Stream#{headers_sent => true,
+                    state => closed}}
+    end.
+
 
 rst_stream(#{connection := Connection,
              stream_id := StreamId} = Stream, ErrorCode) ->
