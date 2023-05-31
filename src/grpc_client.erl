@@ -257,7 +257,8 @@ unary(Connection, Message, Service, Rpc, Decoder, Options) ->
         stop_stream(Stream),
         Response
     catch
-        _Type:_Error ->
+        Type:Error ->
+            io:format("~n~nGRPC-CLIENT:~n~p~n~p~n------------~n~n",[Type,Error]),
             {error, #{error_type => client,
                       status_message => <<"error creating stream">>}}
     end.
