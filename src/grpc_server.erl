@@ -65,12 +65,16 @@ start(Name, Transport, Port, Services, Options) ->
                      stream_window_margin_size => 16384,
                      max_stream_window_size =>  512000,  %65536,
                      max_connection_window_size => 1024000,
-                     idle_timeout => 900000,
-                     inactivity_timeout => 1200000,
+                     idle_timeout => 9000000,
+                     inactivity_timeout => 12000000,
                      active_n => 500,
+                     max_concurrent_streams => infinity,
                      max_stream_buffer_size => 32000000,
                      max_connection_buffer_size => 96000000, 
-                     sendfile => false
+                     sendfile => false,
+                     goaway_initial_timeout => 10000,
+                     goaway_complete_timeout => 32000,
+                     max_reset_stream_rate => {100,10000}
                     },
     case Transport of
         tcp ->

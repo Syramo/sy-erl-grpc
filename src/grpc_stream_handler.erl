@@ -97,6 +97,7 @@ terminate(StreamID, Reason, #state{next=Next}) ->
     cowboy_stream:partial_req(), Resp, cowboy:opts()) -> Resp
     when Resp::cowboy_stream:resp_command().
 early_error(StreamID, Reason, PartialReq, Resp, Opts) ->
+    io:format("~nGRPC EARLY ERROR:~n~p~n~p~n",[StreamID,Reason]),
     cowboy_stream:early_error(StreamID, Reason, PartialReq, Resp, Opts).
 
 
