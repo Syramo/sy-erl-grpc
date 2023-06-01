@@ -429,10 +429,17 @@ handle_call({new_stream, _}, _From,
     {reply, {error, no_more_streams_allowed_by_server}, C};
 handle_call({new_stream, Options}, From, #{streams := Streams,
                                            stream_count := Count} = C) ->
-    {ok, #{id := Id} = Stream} = new_stream(C, From, Options),
-    {reply, {ok, Id}, C#{last_stream => Id,
-                         streams => [{Id, Stream} | Streams],
-                         stream_count => Count + 1}};
+    case [ X || {X, #{state:=idle}} <- Streams ] of
+        [] -> 
+            {ok, #{id := Id} = Stream} = new_stream(C, From, Options),
+            {reply, {ok, Id}, C#{last_stream => Id,
+                                streams => [{Id, Stream} | Streams],
+                                stream_count => Count + 1}};
+        Idle -> 
+            ?LOG_ERROR("new stream requested while ~p idle streams on connection",[Idle]),
+            {reply, {error, idle_streams_present}, C}
+    end;
+
         
 
 %% HEADERS frames can be sent on a stream in the "idle", "reserved (local)",

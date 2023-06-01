@@ -21,6 +21,7 @@
 %% A gen_server is started for each stream, this keeps track
 %% of the status of the http2 stream and it buffers responses in a queue.
 -module(grpc_client_stream).
+-include_lib("kernel/include/logger.hrl").
 
 -behaviour(gen_server).
 
@@ -102,7 +103,13 @@ call_rpc(Pid, Message, Timeout) ->
 %% @private
 init({Connection, Service, Rpc, Encoder, Options}) ->
     try 
-        {ok, new_stream(Connection, Service, Rpc, Encoder, Options)}
+        case new_stream(Connection, Service, Rpc, Encoder, Options, 20) of
+            {error, Err_} ->
+                ?LOG_ERROR("stream creation failed: ~p",[Err_]),
+                {stop, <<"failed to create stream">>};
+            State ->    
+                {ok, State}
+        end
     catch
         _Class:_Error ->
             {stop, <<"failed to create stream">>}
@@ -225,28 +232,37 @@ terminate(_Reason, _State) ->
 
 %% internal methods
 
-new_stream(Connection, Service, Rpc, Encoder, Options) ->
+new_stream(_, _, _, _, _, Retry) when Retry > 32000 ->
+    {error, <<"creatiung stream timeout">>};
+new_stream(Connection, Service, Rpc, Encoder, Options, Retry) ->
     Compression = proplists:get_value(compression, Options, none),
     Metadata = proplists:get_value(metadata, Options, #{}),
     TransportOptions = proplists:get_value(http2_options, Options, []),
-    {ok, StreamId} = grpc_client_connection:new_stream(Connection, TransportOptions),
-    RpcDef = Encoder:find_rpc_def(Service, Rpc),
-    %% the gpb rpc def has 'input', 'output' etc.
-    %% All the information is combined in 1 map, 
-    %% which is is the state of the gen_server.
-    RpcDef#{stream_id => StreamId,
-            package => [],
-            service => Service,
-            rpc => Rpc,
-            queue => queue:new(),
-            response_pending => false,
-            state => idle,
-            encoder => Encoder,
-            connection => Connection,
-            headers_sent => false,
-            metadata => Metadata,
-            compression => Compression,
-            buffer => <<>>}.
+    case grpc_client_connection:new_stream(Connection, TransportOptions) of
+        {ok, StreamId} ->
+            RpcDef = Encoder:find_rpc_def(Service, Rpc),
+            %% the gpb rpc def has 'input', 'output' etc.
+            %% All the information is combined in 1 map, 
+            %% which is is the state of the gen_server.
+            RpcDef#{stream_id => StreamId,
+                    package => [],
+                    service => Service,
+                    rpc => Rpc,
+                    queue => queue:new(),
+                    response_pending => false,
+                    state => idle,
+                    encoder => Encoder,
+                    connection => Connection,
+                    headers_sent => false,
+                    metadata => Metadata,
+                    compression => Compression,
+                    buffer => <<>>};
+        {error, idle_streams_present} ->
+            timer:sleep(Retry),
+            new_stream(Connection, Service, Rpc, Encoder, Options, Retry * 2);
+        Error -> 
+            Error
+    end.
 
 send_msg(#{stream_id := StreamId,
            connection := Connection,
