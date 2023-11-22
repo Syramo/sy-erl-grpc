@@ -92,7 +92,10 @@ stop(Pid, ErrorCode) ->
 call_rpc(Pid, Message, Timeout) ->
     try send_last(Pid, Message) of
         ok ->
-            process_response(Pid, Timeout)
+            process_response(Pid, Timeout);
+        {error, closed} ->
+            {error, #{error_type => client,
+                      status_message => <<"connection closed">>}}
     catch
         _:_ ->
             {error, #{error_type => client,
