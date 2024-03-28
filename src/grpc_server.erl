@@ -45,7 +45,6 @@
             Options::[grpc:server_option()]) ->
     {ok, CowboyListenerPid::pid()} | {error, any()}.
 start(Name, Transport, Port, Services, Options) ->
-    {ok, _Started} = application:ensure_all_started(sgrpc),
     AuthFun = get_authfun(Transport, Options),
     Middlewares = get_middlewares(Options),
     %% All requests are dispatched to this same module (?MODULE),
