@@ -84,15 +84,30 @@ send_headers(#{http_connection := Pid,
               client := Client}, StreamId, Headers) ->
     Client:send_headers(Pid, StreamId, Headers, []).
 
-send_body(#{http_connection := Pid,
-            client := Client}, StreamId, Body, Opts) ->
-    try
-        Client:send_data(Pid, StreamId, Body, Opts)
+send_body(HTTP, StreamId, Body, Opts) ->
+    send_body2 (HTTP, StreamId, Body, <<>>, Opts).
+    
+    
+send_body2 (#{http_connection := Pid,client := Client}=HTTP, StreamId, Body, Cache, Opts) ->
+    Opts2 = case Cache of
+        <<>> -> Opts;
+        _ -> [{end_stream, false}]
+    end,
+    try  Client:send_data(Pid, StreamId, Body, Opts2) of
+        {error, {flow_control, _}} -> 
+            BodySize = byte_size (Body),
+            <<NewBody:(BodySize div 2)/binary,ToCache/binary>> = Body,
+            send_body2 (HTTP, StreamId, NewBody, <<ToCache/binary,Cache/binary>>, Opts);
+        ok when byte_size (Cache) > 0 ->
+            send_body2 (HTTP, StreamId, Cache, <<>>, Opts);
+        Result -> 
+            Result 
     catch
         _:_ ->
             %io:format("Ex: ~p / what: ~P",[Ex,What,64]),
             false
     end.
+
 
 ping(#{http_connection := Pid,
       client := Client}, Timeout) ->
